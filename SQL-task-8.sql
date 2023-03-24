@@ -24,15 +24,65 @@ select dbo.calpercent(securedmarks,totalmarks) as percentage from studtbl;
 drop function calpercent
 
 --2. Create user-defined function to generate a table that contains result of Sem 3 students.
-create function ressem3(@sem varchar,@sem_mark int)
-Returns varchar
+create function ressem3(@sem varchar(20))
+Returns table
 as 
-begin
-declare @sem3res
-set @sem3res = @sem =   
-return @sem3res
-end
+return (select * from dbo.studtbl where semester = @sem)
 --function call 
-select dbo.ressem3(semester,securedmarks) as percentage from studtbl;
+select * from ressem3('sem 3');
 --function drop
 drop function ressem3
+
+--3. Write SQL stored procedure to retrieve all students details. (No parameters)
+create procedure sp_stud_details 
+AS
+BEGIN
+select * from studtbl
+end
+--executing the procedure
+exec sp_stud_details;
+
+--4. Write SQL store procedure to display Sem 1 students details. (One parameter)
+create procedure sp_stud_details1(@semres varchar(20)) 
+AS
+BEGIN
+select * from studtbl where semester=@semres
+end
+--executing the procedure
+exec sp_stud_details1 'sem 1';
+
+--5. Write SQL Stored Procedure to retrieve total number of students details. (OUTPUT Parameter)
+create procedure sp_stud_details3(@semres varchar(20) output) 
+AS
+BEGIN
+select COUNT(STUDENTID)AS TOTAL_NO_OF_STUDENTS FROM STUDTBL
+end
+--executing the procedure
+DECLARE @TOTAL INT
+
+EXEC sp_stud_details3 @TOTAL OUTPUT;
+
+PRINT @TOTAL
+--DROP PROCEDURE
+drop procedure sp_stud_details3
+
+--6. Show the working of Merge Statement by creating a backup for the students details of only students in Sem 1.
+--TARGET TABLE
+select * into dummy_studtbl FROM STUDTBL;
+--select query
+select * from dummy_studtbl--target table
+select * from studtbl;--soruce table
+--table insertion in source table
+insert into studtbl values('ram','sem 1',430,500)
+--table insertion in target table
+insert into dummy_studtbl values('ravi','sem 1',430,500)
+--MERGE STATEMENT
+MERGE DUMMY_STUDTBL T USING (select * from studtbl where semester = 'sem 1')as s
+ON (s.studentid = t.studentid)
+when matched 
+then update set t.studentname = s.studentname
+when not matched by target
+then insert (studentname, semester, securedmarks, totalmarks)
+values(s.studentname,s.semester,s.securedmarks,s.totalmarks)
+when not matched by source
+then delete;
